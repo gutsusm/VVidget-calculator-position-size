@@ -1,0 +1,354 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Position Size Calculator</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;padding:20px;
+ background:#111214;color:#eee;
+ font-family:Arial,sans-serif;
+}
+.app{max-width:760px;margin:auto}
+h2{font-size:20px;letter-spacing:1px;margin-bottom:22px}
+label{
+ display:block;font-size:10px;letter-spacing:1.2px;
+ color:#92969e;margin-bottom:9px;font-weight:bold
+}
+input,select,button{
+ background:#1c1e22;color:#eee;
+ border:1px solid #34373d;border-radius:8px;
+ padding:12px;font-size:14px;min-width:0
+}
+input:focus,select:focus{outline:1px solid #aaa}
+button{cursor:pointer}
+button:hover{background:#292c32}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{margin-bottom:18px;min-width:0}
+.full{grid-column:1/-1}
+.selector{display:flex;gap:8px}
+.selector select{flex:1;width:100%}
+.search{width:100%;margin-bottom:8px}
+.risks{display:flex;gap:8px;flex-wrap:wrap}
+.risks button.active{background:#eee;color:#111}
+.risks button{flex:1;min-width:55px}
+.custom{width:100%;margin-top:8px}
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.result{
+ background:#1b1d21;border:1px solid #34373d;
+ border-radius:12px;padding:20px;margin-top:8px
+}
+.result-title{font-size:10px;color:#92969e;letter-spacing:2px}
+.lot{font-size:38px;font-weight:bold;margin:12px 0}
+.metrics{
+ display:grid;grid-template-columns:1fr 1fr;
+ gap:15px;margin-top:20px
+}
+.metric span{display:block;font-size:11px;color:#92969e;margin-bottom:5px}
+.metric strong{font-size:16px}
+.copy{
+ width:100%;margin-top:20px;
+ background:#eee;color:#111;font-weight:bold
+}
+.star{border:0;background:transparent;padding:8px;font-size:18px}
+.star.on{color:#f3c969}
+.hint{font-size:11px;color:#858992;margin-top:8px}
+.error{color:#ff8585;font-size:12px;margin-top:10px}
+@media(max-width:500px){
+ body{padding:12px}
+ .grid{grid-template-columns:1fr}
+ .price-grid{grid-template-columns:1fr}
+ .metrics{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<h2>POSITION SIZE CALCULATOR</h2>
+
+<div class="grid">
+
+<div class="field">
+<label>PROP FIRM</label>
+<select id="prop">
+<option value="5">FundingPips</option>
+<option value="5">FTMO</option>
+<option value="5">FundedNext</option>
+<option value="4">The5ers</option>
+<option value="5">Alpha Capital</option>
+<option value="6">FXIFY</option>
+<option value="5">Blue Guardian</option>
+<option value="5">E8 Markets</option>
+<option value="5">Maven Trading</option>
+</select>
+</div>
+
+<div class="field">
+<label>ACCOUNT BALANCE ($)</label>
+<input id="balance" type="number" value="10000" min="0">
+</div>
+
+<div class="field full">
+<label>TRADING ASSET</label>
+<input id="search" class="search" placeholder="Search instrument...">
+<select id="asset"></select>
+</div>
+
+<div class="field full">
+<label>FAVORITES</label>
+<div id="favorites" class="hint">Select a star to add favorites.</div>
+</div>
+
+<div class="field full">
+<label>RISK PER TRADE</label>
+<div class="risks">
+<button type="button" data-risk="0.5">0.5%</button>
+<button type="button" data-risk="1" class="active">1%</button>
+<button type="button" data-risk="2">2%</button>
+<button type="button" data-risk="3">3%</button>
+</div>
+<input id="customRisk" class="custom" type="number" placeholder="Custom risk (%)" step="0.01" min="0.01">
+</div>
+
+<div class="field">
+<label>ENTRY PRICE</label>
+<input id="entry" type="number" step="any" placeholder="Entry">
+</div>
+<div class="field">
+<label>STOP LOSS</label>
+<input id="sl" type="number" step="any" placeholder="Stop Loss">
+</div>
+<div class="field full">
+<label>TAKE PROFIT</label>
+<input id="tp" type="number" step="any" placeholder="Take Profit">
+</div>
+
+<div class="field">
+<label>TICK SIZE</label>
+<input id="tickSize" type="number" step="any" placeholder="MT5 specification">
+</div>
+<div class="field">
+<label>TICK VALUE ($ per lot)</label>
+<input id="tickValue" type="number" step="any" placeholder="MT5 specification">
+</div>
+
+<div class="field">
+<label>CONTRACT / VOLUME STEP</label>
+<input id="volumeStep" type="number" value="0.01" step="any">
+</div>
+<div class="field">
+<label>COMMISSION ($ ROUND TURN / LOT)</label>
+<input id="commission" type="number" value="5" step="any">
+</div>
+
+</div>
+
+<div class="result" aria-live="polite">
+<div class="result-title">POSITION SIZE</div>
+<div class="lot" id="lot">— LOT</div>
+<div class="metrics">
+<div class="metric"><span>Risk Amount</span><strong id="riskAmount">—</strong></div>
+<div class="metric"><span>Commission</span><strong id="fee">—</strong></div>
+<div class="metric"><span>Total Estimated Risk</span><strong id="totalRisk">—</strong></div>
+<div class="metric"><span>Stop Loss Distance</span><strong id="distance">—</strong></div>
+<div class="metric"><span>Risk / Reward</span><strong id="rr">—</strong></div>
+<div class="metric"><span>Potential Profit</span><strong id="profit">—</strong></div>
+</div>
+<button class="copy" id="copy" type="button">COPY LOT SIZE</button>
+<div class="error" id="error"></div>
+</div>
+</div>
+
+<script>
+const assets=[
+["EURUSD","Forex Majors"],["GBPUSD","Forex Majors"],
+["USDJPY","Forex Majors"],["AUDUSD","Forex Majors"],
+["NZDUSD","Forex Majors"],["USDCAD","Forex Majors"],
+["USDCHF","Forex Majors"],["EURGBP","Forex Crosses"],
+["EURJPY","Forex Crosses"],["GBPJPY","Forex Crosses"],
+["AUDJPY","Forex Crosses"],["EURCHF","Forex Crosses"],
+["GBPCAD","Forex Crosses"],["EURAUD","Forex Crosses"],
+["XAUUSD","Metals"],["XAGUSD","Metals"],
+["XPTUSD","Metals"],["XPDUSD","Metals"],
+["US30","Indices"],["NAS100","Indices"],
+["SPX500","Indices"],["GER40","Indices"],
+["UK100","Indices"],["JP225","Indices"],
+["BTCUSD","Crypto"],["ETHUSD","Crypto"],
+["LTCUSD","Crypto"],["XRPUSD","Crypto"],
+["USOIL","Energies"],["UKOIL","Energies"]
+];
+
+const $=id=>document.getElementById(id);
+const storageKey="positionCalculatorV1";
+let state={};
+try{state=JSON.parse(localStorage.getItem(storageKey)||"{}")}catch(e){state={}}
+let risk=state.risk||1;
+let favorites=state.favorites||[];
+let selected=state.asset||"EURUSD";
+
+function save(){
+state.risk=risk;
+state.favorites=favorites;
+state.asset=$("asset").value;
+state.prop=$("prop").selectedIndex;
+state.balance=$("balance").value;
+state.commission=$("commission").value;
+state.tickSize=$("tickSize").value;
+state.tickValue=$("tickValue").value;
+state.volumeStep=$("volumeStep").value;
+localStorage.setItem(storageKey,JSON.stringify(state));
+}
+
+function renderAssets(){
+const query=$("search").value.toUpperCase();
+const filtered=assets.filter(a=>a[0].includes(query)||a[1].toUpperCase().includes(query));
+filtered.sort((a,b)=>Number(favorites.includes(b[0]))-Number(favorites.includes(a[0])));
+$("asset").innerHTML="";
+filtered.forEach(a=>{
+const opt=document.createElement("option");
+opt.value=a[0];
+opt.textContent=a[0]+" — "+a[1];
+$("asset").appendChild(opt);
+});
+if(filtered.some(a=>a[0]===selected))$("asset").value=selected;
+renderFavorites();
+}
+
+function renderFavorites(){
+$("favorites").innerHTML="";
+favorites.forEach(name=>{
+const btn=document.createElement("button");
+btn.type="button";btn.textContent="★ "+name;
+btn.onclick=()=>{$("asset").value=name;selected=name;loadAsset();calculate();};
+$("favorites").appendChild(btn);
+});
+}
+
+function loadAsset(){
+selected=$("asset").value;
+$("search").value="";
+renderAssets();
+$("asset").value=selected;
+save();
+}
+
+function setRisk(value){
+risk=value;
+$("customRisk").value="";
+document.querySelectorAll("[data-risk]").forEach(b=>{
+b.classList.toggle("active",Number(b.dataset.risk)===risk);
+});
+save();calculate();
+}
+
+document.querySelectorAll("[data-risk]").forEach(b=>{
+b.onclick=()=>setRisk(Number(b.dataset.risk));
+});
+
+$("customRisk").oninput=()=>{
+risk=Number($("customRisk").value);
+document.querySelectorAll("[data-risk]").forEach(b=>b.classList.remove("active"));
+save();calculate();
+};
+
+$("asset").onchange=()=>{loadAsset();calculate();};
+$("search").oninput=renderAssets;
+
+$("favorites").addEventListener("contextmenu",e=>{
+const btn=e.target.closest("button");
+if(!btn)return;
+e.preventDefault();
+favorites=favorites.filter(x=>x!==btn.textContent.replace("★ ",""));
+renderFavorites();renderAssets();save();
+});
+
+function calculate(){
+const balance=Number($("balance").value);
+const entry=Number($("entry").value);
+const sl=Number($("sl").value);
+const tp=Number($("tp").value);
+const tickSize=Number($("tickSize").value);
+const tickValue=Number($("tickValue").value);
+const step=Number($("volumeStep").value);
+const commission=Number($("commission").value);
+const error=$("error");
+error.textContent="";
+$("lot").textContent="— LOT";
+["riskAmount","fee","totalRisk","distance","rr","profit"].forEach(id=>$(id).textContent="—");
+
+if(!(balance>0&&risk>0&&entry>0&&sl>0&&tickSize>0&&tickValue>0&&step>0)){
+error.textContent="Enter balance, risk, Entry, Stop Loss and valid MT5 tick specifications.";
+return;
+}
+if(entry===sl||!Number.isFinite(entry-sl)){
+error.textContent="Entry and Stop Loss must be different.";
+return;
+}
+if(commission<0){error.textContent="Commission cannot be negative.";return;}
+
+const riskCash=balance*risk/100;
+const ticks=Math.abs(entry-sl)/tickSize;
+const riskPerLot=ticks*tickValue;
+const rawLot=riskCash/(riskPerLot+commission);
+const lot=Math.floor(rawLot/step+1e-9)*step;
+const digits=Math.min(8,Math.max(0,(String(step).split(".")[1]||"").length));
+const fee=lot*commission;
+const actualRisk=lot*riskPerLot+fee;
+const reward=tp>0?Math.abs(tp-entry)/tickSize*tickValue*lot:0;
+const rr=tp>0?Math.abs(tp-entry)/Math.abs(entry-sl):0;
+
+$("lot").textContent=lot.toFixed(digits)+" LOT";
+$("riskAmount").textContent="$"+riskCash.toFixed(2);
+$("fee").textContent="$"+fee.toFixed(2);
+$("totalRisk").textContent="$"+actualRisk.toFixed(2);
+$("distance").textContent=ticks.toFixed(1)+" ticks";
+$("rr").textContent=tp>0?"1:"+rr.toFixed(2):"—";
+$("profit").textContent=tp>0?"$"+(reward-fee).toFixed(2):"—";
+if(lot<=0)error.textContent="Calculated lot is below the minimum volume step.";
+save();
+}
+
+["balance","entry","sl","tp","tickSize","tickValue","volumeStep","commission"].forEach(id=>{
+$(id).addEventListener("input",calculate);
+});
+
+$("prop").onchange=()=>{
+$("commission").value=$("prop").value;
+save();calculate();
+};
+
+$("copy").onclick=()=>{
+const text=$("lot").textContent.replace(" LOT","");
+if(text!=="—")navigator.clipboard?.writeText(text);
+};
+
+$("asset").insertAdjacentHTML("afterend",'<button id="star" class="star" type="button">☆</button>');
+$("star").onclick=()=>{
+const name=$("asset").value;
+favorites=favorites.includes(name)?favorites.filter(x=>x!==name):[...favorites,name];
+renderAssets();$("asset").value=name;
+$("star").textContent=favorites.includes(name)?"★":"☆";
+$("star").classList.toggle("on",favorites.includes(name));
+save();
+};
+
+if(state.prop!==undefined)$("prop").selectedIndex=state.prop;
+$("balance").value=state.balance||10000;
+$("commission").value=state.commission||$("prop").value;
+$("tickSize").value=state.tickSize||"";
+$("tickValue").value=state.tickValue||"";
+$("volumeStep").value=state.volumeStep||"0.01";
+$("customRisk").value="";
+renderAssets();
+$("asset").value=selected;
+$("star").textContent=favorites.includes(selected)?"★":"☆";
+$("star").classList.toggle("on",favorites.includes(selected));
+document.querySelectorAll("[data-risk]").forEach(b=>b.classList.toggle("active",Number(b.dataset.risk)===risk));
+calculate();
+</script>
+</body>
+</html>
+```
